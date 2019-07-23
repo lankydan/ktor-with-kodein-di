@@ -21,11 +21,7 @@ import org.kodein.di.generic.singleton
 import org.slf4j.event.Level
 
 fun main() {
-  startServer()
-}
-
-fun startServer() {
-  embeddedServer(Netty, 8080, module = Application::module).start()
+  embeddedServer(Netty, port = 8080, module = Application::module).start()
 }
 
 fun Application.module() {
