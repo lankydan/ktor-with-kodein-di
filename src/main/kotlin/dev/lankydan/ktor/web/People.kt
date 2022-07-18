@@ -1,12 +1,11 @@
 package dev.lankydan.ktor.web
 
 import dev.lankydan.ktor.repository.PersonRepository
-import io.ktor.application.call
-import io.ktor.http.HttpStatusCode
-import io.ktor.request.receive
-import io.ktor.response.respond
-import io.ktor.response.respondText
-import io.ktor.routing.*
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import java.util.*
 
 data class Person(
@@ -17,6 +16,7 @@ data class Person(
   val job: String
 )
 
+// pretty much every method is an extension function
 fun Routing.people(personRepository: PersonRepository) {
   route("/people") {
     get {
@@ -34,11 +34,11 @@ fun Routing.people(personRepository: PersonRepository) {
       val result = personRepository.save(person.copy(id = UUID.randomUUID()))
       call.respond(result)
     }
-    put {
-      val person = call.receive<Person>()
+    put("/{id}") {
+      val id = UUID.fromString(call.parameters["id"]!!)
+      val person = call.receive<Person>().copy(id = id)
       when {
-        person.id == null -> call.respondText(status = HttpStatusCode.BadRequest) { "Id is missing" }
-        personRepository.exists(person.id) -> call.respond(
+        personRepository.exists(id) -> call.respond(
           HttpStatusCode.OK,
           personRepository.save(person)
         )

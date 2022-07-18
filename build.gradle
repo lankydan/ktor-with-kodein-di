@@ -1,6 +1,6 @@
 buildscript {
-  ext.kotlin_version = '1.3.41'
-  ext.ktor_version = '1.2.2'
+  ext.kotlin_version = '1.7.10'
+  ext.ktor_version = '2.0.3'
 
   repositories {
     mavenCentral()
@@ -20,35 +20,27 @@ java {
 group 'ktor-and-kodein-di'
 version '1.0.0'
 
-kotlin {
-  experimental {
-    coroutines "enable"
-  }
-}
-
 repositories {
   mavenLocal()
-  jcenter()
   mavenCentral()
 }
 
 dependencies {
-  compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-  testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-  testCompile "junit:junit:4.12"
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+  testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+  testImplementation "junit:junit:4.12"
 
-  compile "io.ktor:ktor-server-netty:$ktor_version"
-  compile "io.ktor:ktor-jackson:$ktor_version"
-  compile group: 'org.kodein.di', name: 'kodein-di-generic-jvm', version: '6.3.0'
-  compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
-  compile group: 'com.datastax.oss', name: 'java-driver-core', version: '4.1.0'
-}
+  implementation "io.ktor:ktor-server-netty:$ktor_version"
+  // each plugin is its own dependency, used to be built into ktor in earlier versions of the library
+  // each plugin matches the name in code
+  implementation "io.ktor:ktor-serialization-jackson:$ktor_version"
+  implementation "io.ktor:ktor-server-default-headers:$ktor_version"
+  implementation "io.ktor:ktor-server-call-logging:$ktor_version"
+  implementation "io.ktor:ktor-server-content-negotiation:$ktor_version"
 
-compileKotlin {
-  kotlinOptions.jvmTarget = "1.8"
-}
-compileTestKotlin {
-  kotlinOptions.jvmTarget = "1.8"
+  implementation group: 'org.kodein.di', name: 'kodein-di-generic-jvm', version: '6.5.1'
+  implementation group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+  implementation group: 'com.datastax.oss', name: 'java-driver-core', version: '4.14.1'
 }
 
 jar {
