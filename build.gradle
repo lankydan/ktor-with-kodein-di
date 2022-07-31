@@ -38,9 +38,17 @@ dependencies {
   implementation "io.ktor:ktor-server-call-logging:$ktor_version"
   implementation "io.ktor:ktor-server-content-negotiation:$ktor_version"
 
+  // websockets
+  implementation "io.ktor:ktor-server-websockets:$ktor_version"
+
   implementation group: 'org.kodein.di', name: 'kodein-di-generic-jvm', version: '6.5.1'
   implementation group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
   implementation group: 'com.datastax.oss', name: 'java-driver-core', version: '4.14.1'
+  // Create a Flux and turn it into a Flow
+  // Not _required_ unless we go down the Flux route, possible to do using SharedFlow
+//  implementation group: 'io.projectreactor', name: 'reactor-core', version: '3.4.21'
+//  implementation group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-reactor', version: '1.6.4'//, ext: 'pom'
+
 }
 
 jar {

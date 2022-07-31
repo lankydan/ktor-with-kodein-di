@@ -13,11 +13,13 @@ import io.ktor.server.plugins.callloging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
 import org.kodein.di.Kodein
 import org.kodein.di.generic.bind
 import org.kodein.di.generic.instance
 import org.kodein.di.generic.singleton
 import org.slf4j.event.Level
+import java.time.Duration
 
 fun main() {
   embeddedServer(Netty, port = 8080, module = Application::module).start()
@@ -37,6 +39,11 @@ fun Application.module() {
   install(CallLogging) { level = Level.INFO }
   // setup jackson json serialisation
   install(ContentNegotiation) { jackson() }
+  // allows websockets to be used
+  install(WebSockets) {
+    // this == WebSocketOptions
+    pingPeriod = Duration.ofSeconds(15)
+  }
   // route requests to handler functions
   routing { people(personRepository) }
 }

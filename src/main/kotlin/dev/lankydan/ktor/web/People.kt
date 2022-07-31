@@ -1,20 +1,22 @@
 package dev.lankydan.ktor.web
 
+import dev.lankydan.ktor.data.Person
 import dev.lankydan.ktor.repository.PersonRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import java.util.*
 
-data class Person(
-  val id: UUID?,
-  val firstName: String,
-  val lastName: String,
-  val age: Int,
-  val job: String
-)
+private enum class PeopleFilter {
+  ALL, SAVES, DELETES
+}
 
 // pretty much every method is an extension function
 fun Routing.people(personRepository: PersonRepository) {
@@ -51,6 +53,33 @@ fun Routing.people(personRepository: PersonRepository) {
         call.respond(HttpStatusCode.NoContent, personRepository.delete(id))
       } else {
         call.respondText(status = HttpStatusCode.NotFound) { "There is no record with id: $id" }
+      }
+    }
+    webSocket {
+      var filter = PeopleFilter.ALL
+      incoming.receiveAsFlow().onEach { frame ->
+        (frame as? Frame.Text)?.let { text ->
+          filter = when(text.readText()) {
+            "saves" -> PeopleFilter.SAVES
+            "deletes" -> PeopleFilter.DELETES
+            else -> PeopleFilter.ALL
+          }
+        }
+      }.launchIn(this)
+
+      personRepository.updates.collect { (id, person) ->
+        when (person) {
+          null -> {
+            if (filter == PeopleFilter.ALL || filter == PeopleFilter.DELETES) {
+              outgoing.send(Frame.Text("Deleted person [$id]"))
+            }
+          }
+          else -> {
+            if (filter == PeopleFilter.ALL || filter == PeopleFilter.SAVES) {
+              outgoing.send(Frame.Text("Saved person [$id] $person"))
+            }
+          }
+        }
       }
     }
   }
