@@ -70,121 +70,43 @@ fun Routing.people(personRepository: PersonRepository) {
     }
     webSocket {
       var filter = PeopleFilter.ALL
-//      incoming.receiveAsFlow().onEach { frame ->
-//        (frame as? Frame.Text)?.let { text ->
-//          filter = when (text.readText()) {
-//            "saves" -> PeopleFilter.SAVES
-//            "deletes" -> {
-//              PeopleFilter.DELETES
-//            }
-//            else -> PeopleFilter.ALL
-//          }
-//        }
-//      }.launchIn(this)
-
-//      launch {
-//        for (frame in incoming) {
-//          (frame as? Frame.Text)?.let { text ->
-//            filter = when (text.readText()) {
-//              "saves" -> PeopleFilter.SAVES
-//              "deletes" -> PeopleFilter.DELETES
-//              "stop" -> return@webSocket // Terminates the WebSocket
-//              else -> PeopleFilter.ALL
-//            }
-//          }
-//        }
-//      }
-
-      // throwing an exception does not work
-//      launch {
-//        for (frame in incoming) {
-//          (frame as? Frame.Text)?.let { text ->
-//            filter = when (text.readText()) {
-//              "saves" -> PeopleFilter.SAVES
-//              "deletes" -> PeopleFilter.DELETES
-//              "stop" -> throw RuntimeException("Finish") // Terminates the WebSocket
-//              else -> PeopleFilter.ALL
-//            }
-//          }
-//        }
-//      }
-
-      launch {
-        for (frame in incoming) {
-          (frame as? Frame.Text)?.let { text ->
-            filter = when (text.readText()) {
-              "saves" -> PeopleFilter.SAVES
-              "deletes" -> PeopleFilter.DELETES
-              "stop" -> {
-                close() // Terminates the WebSocket, but does not return from the [webSocket] handler, so the handler is still live and receives updates
-//                throw ClosedReceiveChannelException("closeReason.await()?.message")
-//                cancel()
-                // ONLY NEED THE CLOSE, HOWEVER IT DOES LET THE NEXT UPDATE STILL EXECUTE
-                return@let
-//                this.can
+      try {
+        launch {
+          for (frame in incoming) {
+            (frame as? Frame.Text)?.let { text ->
+              filter = when (text.readText()) {
+                "saves" -> PeopleFilter.SAVES
+                "deletes" -> PeopleFilter.DELETES
+                "stop" -> {
+                  close()
+                  return@let
+                }
+                else -> PeopleFilter.ALL
               }
-              else -> PeopleFilter.ALL
             }
           }
         }
-      }
 
-      personRepository.updates.collect { (id, person) ->
-        when (person) {
-          null -> {
-            if (filter == PeopleFilter.ALL || filter == PeopleFilter.DELETES) {
-              println("delete")
-              outgoing.send(Frame.Text("Deleted person [$id]"))
-            }
-          }
-          else -> {
-            if (filter == PeopleFilter.ALL || filter == PeopleFilter.SAVES) {
-              println("save")
-              outgoing.send(Frame.Text("Saved person [$id] $person"))
-            }
-          }
-        }
-      }
-
-        val incomingJob = incoming.receiveAsFlow().onEach { frame ->
-          (frame as? Frame.Text)?.let { text ->
-            filter = when (text.readText()) {
-              "saves" -> PeopleFilter.SAVES
-              "deletes" -> PeopleFilter.DELETES
-              "stop" -> {
-                close(CloseReason(CloseReason.Codes.NORMAL, "close this socket")) // Terminates the WebSocket, but does not return from the [webSocket] handler, so the handler is still live and receives updates
-                return@let
+        personRepository.updates.collect { (id, person) ->
+          when (person) {
+            null -> {
+              if (filter == PeopleFilter.ALL || filter == PeopleFilter.DELETES) {
+                println("delete")
+                outgoing.send(Frame.Text("Deleted person [$id]"))
+                close()
               }
-              else -> PeopleFilter.ALL
             }
-          }
-        }.launchIn(this)
-
-      // after closing the flow will still execute once when an update comes in unless it is cancelled
-      val outgoingJob = personRepository.updates.onEach { (id, person) ->
-        when (person) {
-          null -> {
-            if (filter == PeopleFilter.ALL || filter == PeopleFilter.DELETES) {
-              println("delete")
-              outgoing.send(Frame.Text("Deleted person [$id]"))
-            }
-          }
-          else -> {
-            if (filter == PeopleFilter.ALL || filter == PeopleFilter.SAVES) {
-              println("save")
-              outgoing.send(Frame.Text("Saved person [$id] $person"))
+            else -> {
+              if (filter == PeopleFilter.ALL || filter == PeopleFilter.SAVES) {
+                println("save")
+                outgoing.send(Frame.Text("Saved person [$id] $person"))
+              }
             }
           }
         }
-      }.launchIn(this)
-
-      val reason = closeReason.await()
-
-      incomingJob.cancel()
-      outgoingJob.cancel()
-      joinAll(incomingJob, outgoingJob)
-
-      println("Closed websocket: ${reason?.message}")
+      } finally {
+        println("closed websocket")
+      }
     }
   }
 }
